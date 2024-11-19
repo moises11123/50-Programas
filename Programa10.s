@@ -8,153 +8,105 @@
 # Ejemplo Python:
 # -----------------------------------------------------------------------------
 
-// Mensajes
-//prompt = "Ingrese una cadena para invertir: "
-//mensaje_resultado = "Cadena invertida: "
+//prompt = "Ingresa una cadena para invertir: "
+//result_msg = "\nCadena invertida: "
 
-// Calcular la longitud de una cadena
-//def string_length(cadena):
-//    """
-//    Calcula la longitud de la cadena.
-//    """
-//    longitud = 0
-//    for char in cadena:
-//        if char == '\0':  # Simula el carácter NULL como en ensamblador
-//            break
-//        longitud += 1
-//    return longitud
+//print(prompt, end="")  # Imprimir mensaje para ingresar cadena
 
-// Invertir una cadena
-//def reverse_string(cadena):
-//    """
-//    Invierte una cadena.
-//    """
-//    lista = list(cadena)  # Convertir a lista para manipulación
-//    inicio = 0
-//    fin = len(lista) - 1
-//    while inicio < fin:
-//        // Intercambiar caracteres
-//        lista[inicio], lista[fin] = lista[fin], lista[inicio]
-//        inicio += 1
-//        fin -= 1
-//    return ''.join(lista)
+//cadena = input()  # Leer cadena del usuario
 
-// Imprimir un mensaje
-//def print_str(cadena):
-//    """
-//    Imprime una cadena en la consola.
-//    """
-//    print(cadena, end='')
+//if cadena.endswith("\n"):  # Remover salto de línea al final de la cadena (si existe)
+//    cadena = cadena[:-1]  # Eliminar el salto de línea
 
-// Implementación principal del programa
+//cadena_invertida = cadena[::-1]  # Invertir la cadena
 
-// Mostrar el mensaje de solicitud de cadena
-//print_str(prompt)
-
-// Leer la cadena ingresada por el usuario
-//buffer = input()
-
-// Calcular la longitud de la cadena
-//longitud = string_length(buffer)
-
-// Invertir la cadena
-//cadena_invertida = reverse_string(buffer)
-
-// Mostrar el mensaje de resultado
-//print_str(mensaje_resultado)
-
-// Imprimir la cadena invertida
-//print_str(cadena_invertida)
-
-// Terminar el programa
-// (En Python, simplemente se deja de ejecutar)
-
-
-
+//print(result_msg, end="")  # Imprimir mensaje de resultado
+//print(cadena_invertida)  # Imprimir cadena invertida
 
 
 # Código
 # -----------------------------------------------------------------------------
-
-
 .section .data
-prompt:           .asciz "Ingrese una cadena para invertir: "
-mensaje_resultado: .asciz "Cadena invertida: "
-buffer:           .space 128                  // Espacio para almacenar la entrada del usuario
+mensaje: .asciz "Ingresa una cadena para invertir: "
+resultado: .asciz "\nCadena invertida: "
 
-        .section .text
-        .global _start
+.section .bss
+.lcomm buffer, 100 // Buffer para la cadena de entrada, tamaño 100 bytes
 
-_start:
-        // Mostrar el mensaje de solicitud de cadena
-        ldr x0, =prompt
-        bl print_str
+.section .text
+.global main
+main:
+    // Imprimir mensaje para ingresar cadena
+    mov x0, 1              // file descriptor 1 (stdout)
+    ldr x1, =mensaje       // Dirección del mensaje
+    mov x2, 32             // Longitud del mensaje
+    mov x8, 64             // syscall write
+    svc 0
 
-        // Leer la cadena ingresada
-        mov x0, #0                    // File descriptor 0 (entrada estándar)
-        ldr x1, =buffer               // Guardar en buffer
-        mov x2, #127                  // Tamaño máximo de entrada (ajustado)
-        mov x8, #63                   // Syscall de read
-        svc 0
+    // Leer cadena del usuario
+    mov x0, 0              // file descriptor 0 (stdin)
+    ldr x1, =buffer        // Dirección del buffer
+    mov x2, 100            // Tamaño máximo de la entrada
+    mov x8, 63             // syscall read
+    svc 0
 
-        // Calcular la longitud de la cadena
-        ldr x1, =buffer               // Dirección de la cadena en buffer
-        bl string_length              // Longitud de la cadena se almacena en x0
+    // Calcular la longitud de la cadena ingresada
+    ldr x3, =buffer        // Dirección del buffer
+    mov x4, #0             // Inicializamos el contador de longitud
+contar_longitud:
+ ldrb w5, [x3, x4]      // Leer byte
+    cmp w5, #0             // Verificar si es fin de cadena ('\0')
+    beq fin_contar
+    add x4, x4, #1         // Incrementar longitud
+    b contar_longitud
+fin_contar:
+    cmp x4, #0             // Si la longitud es 0, saltar
+    beq invertir
+    sub x4, x4, #1         // Ajustar la longitud
+    ldrb w5, [x3, x4]
+    cmp w5, #10            // Si es '\n', reemplazar con '\0'
+    bne invertir
+    strb w0, [x3, x4]      // Reemplazar '\n' por '\0'
 
-        // Invertir la cadena
-        mov x2, x0                    // Guardar longitud en x2
-        ldr x1, =buffer               // Dirección de la cadena en buffer
-        bl reverse_string             // Llamada a la subrutina para invertir la cadena
+invertir:
+    // Punteros para inicio y fin de la cadena
+    ldr x1, =buffer        // x1 apunta al inicio de la cadena
+    add x2, x1, x4         // x2 apunta al final de la cadena
+    sub x2, x2, #1         // Ajustar para no incluir '\0'
 
-        // Mostrar el mensaje de resultado
-        ldr x0, =mensaje_resultado
-        bl print_str
+invertir_loop:
+    cmp x1, x2             // Comparar punteros de inicio y fin
+    bge imprimir_resultado // Si se cruzan, terminar inversión
 
-        // Imprimir la cadena invertida
-        ldr x0, =buffer
-        bl print_str
+    // Intercambiar caracteres en x1 y x2
+    ldrb w3, [x1]          // Cargar carácter en inicio (x1)
+    ldrb w4, [x2]          // Cargar carácter en fin (x2)
+    strb w4, [x1]          // Escribir carácter de fin en inicio
+ strb w3, [x2]          // Escribir carácter de inicio en fin
 
-        // Terminar el programa
-        mov x8, #93                   // Syscall para "exit"
-        svc 0
+    // Mover punteros hacia el centro
+    add x1, x1, #1         // Avanzar puntero de inicio
+    sub x2, x2, #1         // Retroceder puntero de fin
+    b invertir_loop
 
+imprimir_resultado:
+    // Imprimir mensaje de resultado
+    mov x0, 1              // file descriptor 1 (stdout)
+    ldr x1, =resultado     // Dirección del mensaje de resultado
+    mov x2, 18             // Longitud del mensaje
+    mov x8, 64             // syscall write
+    svc 0
 
-string_length:
-        mov x0, #0                    // Inicializar longitud en 0
-length_loop:
-        ldrb w2, [x1, x0]             // Leer el siguiente byte de la cadena
-        cbz w2, end_length            // Si es NULL (fin de cadena), termina
-        add x0, x0, #1                // Incrementar longitud
-        b length_loop
-end_length:
-        ret
+    // Imprimir cadena invertida
+    mov x0, 1              // file descriptor 1 (stdout)
+    ldr x1, =buffer        // Dirección del buffer (cadena invertida)
+    mov x2, x4             // Longitud de la cadena invertida
+    mov x8, 64             // syscall write
+    svc 0
 
-
-reverse_string:
-        sub x2, x2, #1                // Ajustar longitud para índices (último índice)
-        mov x3, #0                    // Índice inicial (comienzo de la cadena)
-reverse_loop:
-        cmp x3, x2                    // Comparar índices de inicio y fin
-        b.ge end_reverse              // Si se encuentran o cruzan, termina
-
-        // Intercambiar caracteres en buffer[x3] y buffer[x2]
-        ldrb w4, [x1, x3]             // Cargar carácter en posición x3
-        ldrb w5, [x1, x2]             // Cargar carácter en posición x2
-        strb w4, [x1, x2]             // Almacenar carácter de x3 en x2
-        strb w5, [x1, x3]             // Almacenar carácter de x2 en x3
-
-        // Avanzar índices
-        add x3, x3, #1
-        sub x2, x2, #1
-        b reverse_loop
-end_reverse:
-        ret
+    // Terminar programa
+    mov x8, 93             // syscall exit
+    mov x0, 0              // Código de salida
+    svc 0
 
 
-print_str:
-        mov x8, #64                   // Syscall para write
-        mov x1, x0                    // Dirección de la cadena a imprimir
-        mov x2, #128                  // Longitud máxima del mensaje
-        mov x0, #1                    // File descriptor 1 (salida estándar)
-        svc 0
-        ret
