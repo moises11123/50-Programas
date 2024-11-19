@@ -16,7 +16,7 @@
 // indice = tamano  # Contador de elementos en la pila
 
 // while indice > 0:
-//     elemento = pila[tamano - indice]  # Tomar el elemento actual de la pila
+//     elemento = pila[tamano - indice]  # Tomar el elemento actual de la pila 
 //     acumulador += elemento            # Sumar el elemento al acumulador
 //     indice -= 1                       # Decrementar el índice
 
